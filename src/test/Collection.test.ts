@@ -1,8 +1,9 @@
 import * as chai from 'chai';
-import { Collection as MongoCollection, connect, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
-import { disconnect } from '../Client';
+import { Collection as MongoCollection, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
+import { connect, disconnect } from '../Client';
 import { Collection } from '../Collection';
 import { Document } from '../Document';
+import { IDynamicObject } from '../Interfaces';
 
 const COL_NAME = 'cats';
 const URI = 'mongodb://localhost:27017/sugo-mongodb-test';
@@ -71,14 +72,143 @@ describe('SuGo MongoDb - Collection', () => {
   });
 
   describe('Field Specification', () => {
-    describe('Validation', () => {});
+    describe('Types', () => {});
 
-    describe('Validation', () => {});
+    describe('Default Values', () => {
+      it('should not set the value of the field if it is set', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              defaultValue: 'default',
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({ name: 'notDefault' });
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          cat.name.should.be.eql('notDefault');
+        }
+      });
 
-    describe('Validation', () => {});
+      it('should not set the value of the field if it is set at null', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              defaultValue: 'default',
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({ name: null });
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          chai.expect(cat.name).to.be.null;
+        }
+      });
 
-    const SpecifiedCol = new Collection(COL_NAME, {
-      name: { validations: { IS_NOT_NULL: async (value, doc) => true } },
+      it('should set the value to the field if it is undefined', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              defaultValue: 'default',
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({});
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          cat.name.should.be.eql('default');
+        }
+      });
+
+      it('should set the value to the field if it is undefined', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              defaultValue: (doc: IDynamicObject) => 'default',
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({});
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          cat.name.should.be.eql('default');
+        }
+      });
+    });
+
+    describe('Hidden', () => {
+      it('should hide the field when obtaining the json object', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              hidden: true,
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({ name: 'hidden' });
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          chai.expect(cat.name).not.to.be.undefined;
+          chai.expect(cat.lean().name).to.be.undefined;
+        }
+      });
+    });
+
+    describe('Validation', () => {
+      it('should run the validations and save the object it does pass the validations', async () => {
+        const SpecifiedCol = new Collection<ICat>(
+          COL_NAME,
+          {
+            name: {
+              validations: {
+                IS_NOT_NULL: async (value, doc) => value !== null && value !== undefined,
+              },
+            },
+          },
+          { client },
+        );
+        const cat = await SpecifiedCol.create({ name: 'fluffy' });
+        if (!cat) {
+          chai.expect.fail();
+        } else {
+          cat.name.should.be.eql('fluffy');
+        }
+      });
+
+      it('should run the validations and throw an Error because it did not pass the validations', async () => {
+        const SpecifiedCol = new Collection(
+          COL_NAME,
+          {
+            name: {
+              validations: {
+                IS_NOT_NULL: async (value, doc) => value !== null && value !== undefined,
+              },
+            },
+          },
+          { client },
+        );
+        try {
+          await SpecifiedCol.create({});
+          chai.expect.fail();
+        } catch (error) {
+          error.validation.should.be.eql('IS_NOT_NULL');
+        }
+      });
     });
   });
 

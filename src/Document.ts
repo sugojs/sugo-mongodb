@@ -1,17 +1,9 @@
 import * as dotObject from 'dot-object';
-import * as moment from 'moment';
 import { ObjectId } from 'mongodb';
 import { Collection } from './Collection';
 import { ValidationError } from './exceptions';
 import DocumentNotPersistedError from './exceptions/DocumentNotPersistedError';
 import { IDynamicObject, IFieldSpecification } from './Interfaces';
-
-const defaultFormats = [
-  moment.HTML5_FMT.DATETIME_LOCAL,
-  moment.HTML5_FMT.DATETIME_LOCAL_SECONDS,
-  moment.HTML5_FMT.DATETIME_LOCAL_MS,
-  moment.HTML5_FMT.DATE,
-];
 
 export class Document implements IDynamicObject {
   public collection: Collection<Document>;
@@ -87,13 +79,7 @@ export class Document implements IDynamicObject {
   }
 
   public lean() {
-    const json: IDynamicObject = {};
-    for (const key in this) {
-      if (this.hasOwnProperty(key)) {
-        json[key] = this[key];
-      }
-    }
-    return json;
+    return this.toJSON();
   }
 
   public toJSON() {

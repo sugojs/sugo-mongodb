@@ -7,6 +7,8 @@ export interface IDynamicObject {
 
 export type ValidationFunction = (value: any, doc: IDynamicObject) => boolean | Promise<boolean>;
 
+export type DefaultValueFunction = (doc: IDynamicObject) => any;
+
 export interface IFieldSpecification {
   [key: string]: IFieldOptions;
 }
@@ -17,12 +19,10 @@ export interface IValidationSpecs {
 
 export interface IFieldOptions {
   type?: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
-  required?: boolean;
-  null?: boolean;
   validations?: IValidationSpecs;
   hidden?: boolean;
   formats?: string[];
-  defaultValue?: any;
+  defaultValue?: DefaultValueFunction | any;
 }
 
 export interface IIndexSpecification {

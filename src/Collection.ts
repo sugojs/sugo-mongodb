@@ -112,7 +112,7 @@ export class Collection<T extends Document> {
         const currentValue = dotObject.pick(fieldKey, data, false);
         const defaultValue = fieldSpecs[fieldKey].defaultValue;
         if (currentValue === undefined && defaultValue) {
-          dotObject.set(fieldKey, defaultValue, data, false);
+          dotObject.set(fieldKey, typeof defaultValue === 'function' ? defaultValue(this) : defaultValue, data, false);
         }
       }
     }
@@ -125,6 +125,7 @@ export class Collection<T extends Document> {
       if (fieldSpecs.hasOwnProperty(fieldKey)) {
         const currentValue = dotObject.pick(fieldKey, data, false);
         const valueType = fieldSpecs[fieldKey].type;
+        const dateFormats = fieldSpecs[fieldKey].formats;
         let parsedValue;
         switch (valueType) {
           case FIELD_TYPES.BOOLEAN:
@@ -139,7 +140,7 @@ export class Collection<T extends Document> {
           case FIELD_TYPES.DATE:
             parsedValue = moment.utc(
               currentValue,
-              fieldSpecs[fieldKey].formats.length > 0 ? fieldSpecs[fieldKey].formats : DEFAULT_DATE_FORMAT,
+              dateFormats && dateFormats.length > 0 ? dateFormats : DEFAULT_DATE_FORMAT,
               true,
             );
             if (!parsedValue.isValid()) {
