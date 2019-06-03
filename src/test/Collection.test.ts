@@ -1,6 +1,7 @@
 import * as chai from 'chai';
-import { Collection as MongoCollection, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
-import { Collection, connect, disconnect } from '../Collection';
+import { Collection as MongoCollection, connect, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
+import { disconnect } from '../Client';
+import { Collection } from '../Collection';
 import { Document } from '../Document';
 
 const COL_NAME = 'cats';
@@ -13,8 +14,8 @@ const cats = [
   { _id: new ObjectId(), name: 'Four', pure: true },
   { _id: new ObjectId(), name: 'Five', pure: false },
 ];
-const client = new MongoClient('mongodb://localhost:27017/sugo-mongodb-test');
-const CatCol = new Collection<ICat>('cats');
+const client = new MongoClient(URI, { useNewUrlParser: true });
+const CatCol = new Collection<ICat>(COL_NAME, {}, { client });
 let db: MongoDb;
 let mCatCol: MongoCollection;
 
@@ -69,7 +70,17 @@ describe('SuGo MongoDb - Collection', () => {
     });
   });
 
-  describe('Field Specification', () => {});
+  describe('Field Specification', () => {
+    describe('Validation', () => {});
+
+    describe('Validation', () => {});
+
+    describe('Validation', () => {});
+
+    const SpecifiedCol = new Collection(COL_NAME, {
+      name: { validations: { IS_NOT_NULL: async (value, doc) => true } },
+    });
+  });
 
   describe('Database operations', () => {
     before(async () => {

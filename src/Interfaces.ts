@@ -16,13 +16,13 @@ export interface IValidationSpecs {
 }
 
 export interface IFieldOptions {
-  type: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
-  required: boolean;
-  null: boolean;
-  validations: IValidationSpecs;
-  hidden: boolean;
-  formats: string[];
-  defaultValue: any;
+  type?: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
+  required?: boolean;
+  null?: boolean;
+  validations?: IValidationSpecs;
+  hidden?: boolean;
+  formats?: string[];
+  defaultValue?: any;
 }
 
 export interface IIndexSpecification {
@@ -49,6 +49,4 @@ export interface ICollectionOptions {
   db?: Db;
 }
 
-export interface IDocument extends Document {
-  
-}
+export interface IDocument extends Document {}

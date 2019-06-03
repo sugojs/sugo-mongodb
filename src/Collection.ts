@@ -9,6 +9,7 @@ import {
   ObjectId,
   WriteOpResult,
 } from 'mongodb';
+import { client } from './Client';
 import { Document } from './Document';
 import { ParsingError, ValidationError } from './exceptions';
 import {
@@ -20,20 +21,24 @@ import {
   ISort,
   IVirtualFieldSpecification,
 } from './Interfaces';
-const defaultFormats = [
+export const DEFAULT_DATE_FORMAT = [
   moment.HTML5_FMT.DATETIME_LOCAL,
   moment.HTML5_FMT.DATETIME_LOCAL_SECONDS,
   moment.HTML5_FMT.DATETIME_LOCAL_MS,
   moment.HTML5_FMT.DATE,
 ];
-
-export const DEFAULT_URI = 'mongodb://localhost:27017/test';
-let client: MongoClient = new MongoClient(DEFAULT_URI);
-
-export const connect = async (uri: string, options?: MongoClientOptions) =>
-  (client = await new MongoClient(uri, options).connect());
-
-export const disconnect = async () => client.close();
+export const FALSE_VALUES = ['false', 0, false];
+export const TRUE_VALUES = ['true', 1, true];
+export const FIELD_TYPES = {
+  BOOLEAN: 'boolean',
+  DATE: 'date',
+  FLOAT: 'float',
+  INTEGER: 'integer',
+  OBJECT_ID: 'objectId',
+  STRING: 'string',
+};
+export const CREATED_AT_KEY = 'createdAt';
+export const UPDATED_AT_KEY = 'updatedAtKey';
 
 export class Collection<T extends Document> {
   public get Model() {
@@ -43,8 +48,8 @@ export class Collection<T extends Document> {
   public fields: IFieldSpecification;
   public indexes: IIndexSpecification[] = [];
   public virtuals: IVirtualFieldSpecification;
-  public createdAtKey = 'createdAt';
-  public updatedAtKey = 'updatedAtKey';
+  public createdAtKey = CREATED_AT_KEY;
+  public updatedAtKey = UPDATED_AT_KEY;
   public options: ICollectionOptions;
   public client: MongoClient;
 
@@ -57,10 +62,10 @@ export class Collection<T extends Document> {
   }
 
   public async getDb(): Promise<Db> {
-    if (!client.isConnected()) {
-      await client.connect();
+    if (!this.client.isConnected()) {
+      await this.client.connect();
     }
-    return client.db();
+    return this.client.db();
   }
 
   public async getMongoCollection(): Promise<MongoCollection> {
@@ -122,19 +127,19 @@ export class Collection<T extends Document> {
         const valueType = fieldSpecs[fieldKey].type;
         let parsedValue;
         switch (valueType) {
-          case 'boolean':
-            if (['false', 0, false].includes(currentValue)) {
+          case FIELD_TYPES.BOOLEAN:
+            if (FALSE_VALUES.includes(currentValue)) {
               parsedValue = false;
-            } else if (['true', 1, true].includes(currentValue)) {
+            } else if (TRUE_VALUES.includes(currentValue)) {
               parsedValue = true;
             } else {
               throw new ParsingError(fieldKey, currentValue, valueType);
             }
             break;
-          case 'date':
+          case FIELD_TYPES.DATE:
             parsedValue = moment.utc(
               currentValue,
-              fieldSpecs[fieldKey].formats.length > 0 ? fieldSpecs[fieldKey].formats : defaultFormats,
+              fieldSpecs[fieldKey].formats.length > 0 ? fieldSpecs[fieldKey].formats : DEFAULT_DATE_FORMAT,
               true,
             );
             if (!parsedValue.isValid()) {
@@ -142,26 +147,26 @@ export class Collection<T extends Document> {
             }
             parsedValue = parsedValue.toDate();
             break;
-          case 'float':
+          case FIELD_TYPES.FLOAT:
             if (isNaN(currentValue)) {
               throw new ParsingError(fieldKey, currentValue, valueType);
             }
             parsedValue = parseFloat(currentValue);
             break;
-          case 'integer':
+          case FIELD_TYPES.INTEGER:
             if (isNaN(currentValue)) {
               throw new ParsingError(fieldKey, currentValue, valueType);
             }
             parsedValue = parseInt(currentValue, 10);
             break;
-          case 'objectId':
+          case FIELD_TYPES.OBJECT_ID:
             if (ObjectId.isValid(currentValue)) {
               throw new ParsingError(fieldKey, currentValue, valueType);
             }
             parsedValue = new ObjectId(currentValue);
             break;
-          case 'string':
-            parsedValue = typeof currentValue !== 'string' ? currentValue.toString() : currentValue;
+          case FIELD_TYPES.STRING:
+            parsedValue = typeof currentValue !== FIELD_TYPES.STRING ? currentValue.toString() : currentValue;
             break;
           default:
             break;

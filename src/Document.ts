@@ -2,8 +2,9 @@ import * as dotObject from 'dot-object';
 import * as moment from 'moment';
 import { ObjectId } from 'mongodb';
 import { Collection } from './Collection';
-import { ParsingError, ValidationError } from './exceptions';
-import { IDocument, IDynamicObject, IFieldSpecification } from './Interfaces';
+import { ValidationError } from './exceptions';
+import DocumentNotPersistedError from './exceptions/DocumentNotPersistedError';
+import { IDynamicObject, IFieldSpecification } from './Interfaces';
 
 const defaultFormats = [
   moment.HTML5_FMT.DATETIME_LOCAL,
@@ -127,7 +128,7 @@ export class Document implements IDynamicObject {
     if (this._id) {
       return this.collection.patchById(this._id, this);
     } else {
-      throw new Error('document-not-persisted-in-database');
+      throw new DocumentNotPersistedError(this);
     }
   }
 
