@@ -5,7 +5,6 @@ import {
   Db,
   FindAndModifyWriteOpResultObject,
   MongoClient,
-  MongoClientOptions,
   ObjectId,
   WriteOpResult,
 } from 'mongodb';
@@ -19,7 +18,6 @@ import {
   IIndexSpecification,
   IProjection,
   ISort,
-  IVirtualFieldSpecification,
 } from './Interfaces';
 export const DEFAULT_DATE_FORMAT = [
   moment.HTML5_FMT.DATETIME_LOCAL,
@@ -41,13 +39,9 @@ export const CREATED_AT_KEY = 'createdAt';
 export const UPDATED_AT_KEY = 'updatedAtKey';
 
 export class Collection<T extends Document> {
-  public get Model() {
-    return Object.getPrototypeOf(this).constructor;
-  }
   public name: string;
   public fields: IFieldSpecification;
   public indexes: IIndexSpecification[] = [];
-  public virtuals: IVirtualFieldSpecification;
   public createdAtKey = CREATED_AT_KEY;
   public updatedAtKey = UPDATED_AT_KEY;
   public options: ICollectionOptions;
@@ -58,7 +52,6 @@ export class Collection<T extends Document> {
     this.fields = fields;
     this.options = options;
     this.client = options.client ? options.client : client;
-    this.virtuals = options.virtuals ? options.virtuals : {};
   }
 
   public async getDb(): Promise<Db> {

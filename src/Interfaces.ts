@@ -43,10 +43,7 @@ export interface IVirtualFieldSpecification {
 }
 
 export interface ICollectionOptions {
-  indexes?: IIndexSpecification;
-  virtuals?: IVirtualFieldSpecification;
   client?: MongoClient;
-  db?: Db;
 }
 
 export interface IDocument extends Document {}

@@ -9,10 +9,6 @@ export class Document implements IDynamicObject {
   public collection: Collection<Document>;
   public _id?: ObjectId;
 
-  /**
-   *
-   * @param {Object} data
-   */
   constructor(collection: Collection<Document>, data: IDynamicObject) {
     this.collection = collection;
     for (const key in data) {
