@@ -1,25 +1,35 @@
 import * as dotObject from 'dot-object';
-import { ObjectId } from 'mongodb';
-import { Collection } from './Collection';
-import { ValidationError } from './exceptions';
+import moment = require('moment');
+import { Collection as MongoCollection, Db, MongoClient, ObjectId } from 'mongodb';
+import { Collection, DEFAULT_DATE_FORMAT, FALSE_VALUES, FIELD_TYPES, TRUE_VALUES } from './Collection';
+import { ParsingError, ValidationError } from './exceptions';
 import DocumentNotPersistedError from './exceptions/DocumentNotPersistedError';
-import { IDynamicObject, IFieldSpecification } from './Interfaces';
+import { IDocumentInternals, IDynamicObject, IFieldSpecification } from './Interfaces';
+import { getMongoCollection, processFindOneAndWriteResult } from './Mongodb';
 
 export class Document implements IDynamicObject {
-  public collection: Collection<Document>;
+  [key: string]: any;
   public _id?: ObjectId;
+  private $internals: IDocumentInternals;
 
-  constructor(collection: Collection<Document>, data: IDynamicObject) {
-    this.collection = collection;
+  constructor(data: IDynamicObject, collection: Collection<any>) {
     for (const key in data) {
       if (data.hasOwnProperty(key)) {
-        Object.defineProperty(this, key, { configurable: true, enumerable: true, writable: true, value: data[key] });
+        this[key] = data[key];
       }
     }
-    Object.defineProperty(this, 'collection', {
+    this.$internals = {
+      client: collection.client,
+      collectionName: collection.name,
+      createdAtKey: collection.createdAtKey,
+      deleted: false,
+      fields: collection.fields,
+      updatedAtKey: collection.updatedAtKey,
+    };
+    Object.defineProperty(this, '$internals', {
       configurable: false,
       enumerable: false,
-      value: collection,
+      value: this.$internals,
       writable: false,
     });
     this.addDefaultValues();
@@ -27,11 +37,13 @@ export class Document implements IDynamicObject {
   }
 
   public addCreatedAt() {
-    this.collection.addCreatedAt(this);
+    this[this.$internals.createdAtKey] = new Date();
+    return this;
   }
 
   public addUpdatedAt() {
-    this.collection.addUpdatedAt(this);
+    this[this.$internals.updatedAtKey] = new Date();
+    return this;
   }
 
   public merge(data: IDynamicObject) {
@@ -42,21 +54,85 @@ export class Document implements IDynamicObject {
         dotObject.set(key, value, this, false);
       }
     }
+    this.parse();
     return this;
   }
 
   public addDefaultValues() {
-    this.collection.addDefaultValues(this);
+    const fieldSpecs: IFieldSpecification = this.$internals.fields;
+    for (const fieldKey in fieldSpecs) {
+      if (fieldSpecs.hasOwnProperty(fieldKey)) {
+        const currentValue = dotObject.pick(fieldKey, this, false);
+        const defaultValue = fieldSpecs[fieldKey].defaultValue;
+        if (currentValue === undefined && defaultValue) {
+          dotObject.set(fieldKey, typeof defaultValue === 'function' ? defaultValue(this) : defaultValue, this, false);
+        }
+      }
+    }
     return this;
   }
 
   public parse() {
-    this.collection.parse(this);
+    const fieldSpecs: IFieldSpecification = this.$internals.fields;
+    for (const fieldKey in fieldSpecs) {
+      if (fieldSpecs.hasOwnProperty(fieldKey)) {
+        const currentValue = dotObject.pick(fieldKey, this, false);
+        const valueType = fieldSpecs[fieldKey].type;
+        const dateFormats = fieldSpecs[fieldKey].formats;
+        let parsedValue;
+        switch (valueType) {
+          case FIELD_TYPES.BOOLEAN:
+            if (FALSE_VALUES.includes(currentValue)) {
+              parsedValue = false;
+            } else if (TRUE_VALUES.includes(currentValue)) {
+              parsedValue = true;
+            } else {
+              throw new ParsingError(fieldKey, currentValue, valueType);
+            }
+            break;
+          case FIELD_TYPES.DATE:
+            parsedValue = moment.utc(
+              currentValue,
+              dateFormats && dateFormats.length > 0 ? dateFormats : DEFAULT_DATE_FORMAT,
+              true,
+            );
+            if (!parsedValue.isValid()) {
+              throw new ParsingError(fieldKey, currentValue, valueType);
+            }
+            parsedValue = parsedValue.toDate();
+            break;
+          case FIELD_TYPES.FLOAT:
+            if (isNaN(currentValue)) {
+              throw new ParsingError(fieldKey, currentValue, valueType);
+            }
+            parsedValue = parseFloat(currentValue);
+            break;
+          case FIELD_TYPES.INTEGER:
+            if (isNaN(currentValue)) {
+              throw new ParsingError(fieldKey, currentValue, valueType);
+            }
+            parsedValue = parseInt(currentValue, 10);
+            break;
+          case FIELD_TYPES.OBJECT_ID:
+            if (ObjectId.isValid(currentValue)) {
+              throw new ParsingError(fieldKey, currentValue, valueType);
+            }
+            parsedValue = new ObjectId(currentValue);
+            break;
+          case FIELD_TYPES.STRING:
+            parsedValue = typeof currentValue !== FIELD_TYPES.STRING ? currentValue.toString() : currentValue;
+            break;
+          default:
+            break;
+        }
+        dotObject.set(fieldKey, parsedValue, this, false);
+      }
+    }
     return this;
   }
 
   public async validate() {
-    const fieldSpecs: IFieldSpecification = this.collection.fields;
+    const fieldSpecs: IFieldSpecification = this.$internals.fields;
     for (const fieldKey in fieldSpecs) {
       if (fieldSpecs.hasOwnProperty(fieldKey)) {
         const currentValue = dotObject.pick(fieldKey, this, false);
@@ -80,18 +156,11 @@ export class Document implements IDynamicObject {
 
   public toJSON() {
     const json: IDynamicObject = {};
-    const fieldSpecs: IFieldSpecification = this.collection.fields;
+    const fieldSpecs: IFieldSpecification = this.$internals.fields;
 
     for (const key in this) {
       if (this.hasOwnProperty(key)) {
         json[key] = this[key];
-      }
-    }
-
-    for (const virtualName in this.collection.virtuals) {
-      if (this.collection.virtuals.hasOwnProperty(virtualName)) {
-        const fn = this.collection.virtuals[virtualName];
-        dotObject.set(virtualName, fn(this), this, false);
       }
     }
 
@@ -108,18 +177,41 @@ export class Document implements IDynamicObject {
 
   public async refresh() {
     if (this._id) {
-      return this.collection.patchById(this._id, this);
+      return this.collection.get(this._id, this);
     } else {
       throw new DocumentNotPersistedError(this);
     }
   }
 
   public async save() {
+    await this.validate();
+    const col = await getMongoCollection(this.$internals.client, this.$internals.collectionName);
+    let doc;
     if (this._id) {
-      return this.collection.patchById(this._id, this);
+      this.addUpdatedAt();
+      const result = await col.findOneAndUpdate(
+        { _id: new ObjectId(this._id) },
+        { $set: this.rawData() },
+        { returnOriginal: false },
+      );
+      doc = processFindOneAndWriteResult(result);
     } else {
-      return this.collection.create(this);
+      this.addCreatedAt();
+      const { ops } = await col.insertOne(this.rawData());
+      doc = ops.pop();
     }
+    this.merge(doc);
+    return this;
+  }
+
+  private rawData() {
+    const data: IDynamicObject = {};
+    for (const key in this) {
+      if (this.hasOwnProperty(key) && typeof this[key] !== 'function') {
+        data[key] = this[key];
+      }
+    }
+    return data;
   }
 }
 

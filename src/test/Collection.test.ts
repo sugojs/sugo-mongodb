@@ -3,7 +3,8 @@ import { Collection as MongoCollection, Db as MongoDb, MongoClient, ObjectId } f
 import { connect, disconnect } from '../Client';
 import { Collection } from '../Collection';
 import { Document } from '../Document';
-import { IDynamicObject } from '../Interfaces';
+import { IDocument, IDynamicObject } from '../Interfaces';
+import { getDb } from '../Mongodb';
 
 const COL_NAME = 'cats';
 const URI = 'mongodb://localhost:27017/sugo-mongodb-test';
@@ -22,9 +23,10 @@ let mCatCol: MongoCollection;
 
 chai.should();
 
-interface ICat extends Document {
+interface ICat extends IDocument {
   name: string;
   pure: boolean;
+  nullable: null;
 }
 
 // Our parent block
@@ -51,7 +53,7 @@ describe('SuGo MongoDb - Collection', () => {
       const Cats = new Collection(COL_NAME);
       const fn = () => Cats.list();
       fn.should.not.throw(Error);
-      const catDb = await Cats.getDb();
+      const catDb = await getDb(Cats.client);
       catDb.databaseName.should.be.eql('test');
     });
 
@@ -103,11 +105,11 @@ describe('SuGo MongoDb - Collection', () => {
           },
           { client },
         );
-        const cat = await SpecifiedCol.create({ name: null });
+        const cat = await SpecifiedCol.create({ nullable: null });
         if (!cat) {
           chai.expect.fail();
         } else {
-          chai.expect(cat.name).to.be.null;
+          chai.expect(cat.nullable).to.be.null;
         }
       });
 
@@ -160,6 +162,7 @@ describe('SuGo MongoDb - Collection', () => {
           { client },
         );
         const cat = await SpecifiedCol.create({ name: 'hidden' });
+        cat;
         if (!cat) {
           chai.expect.fail();
         } else {
@@ -176,7 +179,7 @@ describe('SuGo MongoDb - Collection', () => {
           {
             name: {
               validations: {
-                IS_NOT_NULL: async (value, doc) => value !== null && value !== undefined,
+                IS_NOT_NULL: async (value: any, doc: ICat) => value !== null && value !== undefined,
               },
             },
           },

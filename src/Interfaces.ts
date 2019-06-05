@@ -5,24 +5,24 @@ export interface IDynamicObject {
   [key: string]: any;
 }
 
-export type ValidationFunction = (value: any, doc: IDynamicObject) => boolean | Promise<boolean>;
+export type ValidationFunction<T = any> = (value: any, doc: T) => boolean | Promise<boolean>;
 
-export type DefaultValueFunction = (doc: IDynamicObject) => any;
+export type DefaultValueFunction<T = any> = (doc: T) => any;
 
-export interface IFieldSpecification {
-  [key: string]: IFieldOptions;
+export interface IFieldSpecification<T = any> {
+  [key: string]: IFieldOptions<T>;
 }
 
-export interface IValidationSpecs {
-  [key: string]: ValidationFunction;
+export interface IValidationSpecs<T = any> {
+  [key: string]: ValidationFunction<T>;
 }
 
-export interface IFieldOptions {
+export interface IFieldOptions<T = any> {
   type?: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
-  validations?: IValidationSpecs;
+  validations?: IValidationSpecs<T>;
   hidden?: boolean;
   formats?: string[];
-  defaultValue?: DefaultValueFunction | any;
+  defaultValue?: DefaultValueFunction<T> | any;
 }
 
 export interface IIndexSpecification {
@@ -44,6 +44,15 @@ export interface IVirtualFieldSpecification {
 
 export interface ICollectionOptions {
   client?: MongoClient;
+}
+
+export interface IDocumentInternals {
+  client: MongoClient;
+  collectionName: string;
+  fields: IFieldSpecification;
+  createdAtKey: string;
+  updatedAtKey: string;
+  deleted: boolean;
 }
 
 export interface IDocument extends Document {}
