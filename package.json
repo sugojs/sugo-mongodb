@@ -1,5 +1,5 @@
 {
-  "name": "sugo-mongodb",
+  "name": "@sugo/mongodb",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
