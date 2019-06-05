@@ -17,8 +17,10 @@ export interface IValidationSpecs<T = any> {
   [key: string]: ValidationFunction<T>;
 }
 
+export type FieldType = 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
+
 export interface IFieldOptions<T = any> {
-  type?: 'string' | 'integer' | 'float' | 'boolean' | 'date' | 'objectId';
+  type?: FieldType;
   validations?: IValidationSpecs<T>;
   hidden?: boolean;
   formats?: string[];
@@ -54,5 +56,3 @@ export interface IDocumentInternals {
   updatedAtKey: string;
   deleted: boolean;
 }
-
-export interface IDocument extends Document {}

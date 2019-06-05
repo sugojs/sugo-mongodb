@@ -1,20 +1,20 @@
 import * as chai from 'chai';
 import { Collection as MongoCollection, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
 import { connect, disconnect } from '../Client';
-import { Collection } from '../Collection';
+import { Collection, FIELD_TYPES } from '../Collection';
 import { Document } from '../Document';
-import { IDocument, IDynamicObject } from '../Interfaces';
+import { IDynamicObject } from '../Interfaces';
 import { getDb } from '../Mongodb';
 
 const COL_NAME = 'cats';
 const URI = 'mongodb://localhost:27017/sugo-mongodb-test';
 const DB_NAME = 'sugo-mongodb-test';
 const cats = [
-  { _id: new ObjectId(), name: 'One', pure: true },
-  { _id: new ObjectId(), name: 'Two', pure: false },
-  { _id: new ObjectId(), name: 'Three', pure: true },
-  { _id: new ObjectId(), name: 'Four', pure: true },
-  { _id: new ObjectId(), name: 'Five', pure: false },
+  { _id: new ObjectId(), string: 'One', pure: true },
+  { _id: new ObjectId(), string: 'Two', pure: false },
+  { _id: new ObjectId(), string: 'Three', pure: true },
+  { _id: new ObjectId(), string: 'Four', pure: true },
+  { _id: new ObjectId(), string: 'Five', pure: false },
 ];
 const client = new MongoClient(URI, { useNewUrlParser: true });
 const CatCol = new Collection<ICat>(COL_NAME, {}, { client });
@@ -23,10 +23,13 @@ let mCatCol: MongoCollection;
 
 chai.should();
 
-interface ICat extends IDocument {
-  name: string;
-  pure: boolean;
-  nullable: null;
+interface ICat extends Document {
+  boolean: boolean;
+  date: Date;
+  float: number;
+  integer: number;
+  objectId: ObjectId;
+  string: string;
 }
 
 // Our parent block
@@ -42,7 +45,7 @@ describe('SuGo MongoDb - Collection', () => {
   });
 
   describe(`Constructor`, () => {
-    it('should properly create the collection object with only the name', async () => {
+    it('should properly create the collection object with only the string', async () => {
       const Cats = new Collection(COL_NAME);
       Object.keys(Cats.fields).length.should.be.eql(0);
     });
@@ -74,24 +77,22 @@ describe('SuGo MongoDb - Collection', () => {
   });
 
   describe('Field Specification', () => {
-    describe('Types', () => {});
-
     describe('Default Values', () => {
       it('should not set the value of the field if it is set', async () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               defaultValue: 'default',
             },
           },
           { client },
         );
-        const cat = await SpecifiedCol.create({ name: 'notDefault' });
+        const cat = await SpecifiedCol.create({ string: 'notDefault' });
         if (!cat) {
           chai.expect.fail();
         } else {
-          cat.name.should.be.eql('notDefault');
+          cat.string.should.be.eql('notDefault');
         }
       });
 
@@ -99,7 +100,7 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               defaultValue: 'default',
             },
           },
@@ -107,9 +108,9 @@ describe('SuGo MongoDb - Collection', () => {
         );
         const cat = await SpecifiedCol.create({ nullable: null });
         if (!cat) {
-          chai.expect.fail();
+          return chai.expect.fail();
         } else {
-          chai.expect(cat.nullable).to.be.null;
+          return chai.expect(cat.nullable).to.be.null;
         }
       });
 
@@ -117,7 +118,7 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               defaultValue: 'default',
             },
           },
@@ -127,7 +128,7 @@ describe('SuGo MongoDb - Collection', () => {
         if (!cat) {
           chai.expect.fail();
         } else {
-          cat.name.should.be.eql('default');
+          cat.string.should.be.eql('default');
         }
       });
 
@@ -135,7 +136,7 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               defaultValue: (doc: IDynamicObject) => 'default',
             },
           },
@@ -145,7 +146,7 @@ describe('SuGo MongoDb - Collection', () => {
         if (!cat) {
           chai.expect.fail();
         } else {
-          cat.name.should.be.eql('default');
+          cat.string.should.be.eql('default');
         }
       });
     });
@@ -155,19 +156,17 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               hidden: true,
             },
           },
           { client },
         );
-        const cat = await SpecifiedCol.create({ name: 'hidden' });
-        cat;
+        const cat = await SpecifiedCol.create({ string: 'hidden' });
         if (!cat) {
           chai.expect.fail();
         } else {
-          chai.expect(cat.name).not.to.be.undefined;
-          chai.expect(cat.lean().name).to.be.undefined;
+          return chai.expect(cat.string).not.to.be.undefined && chai.expect(cat.lean().string).to.be.undefined;
         }
       });
     });
@@ -177,7 +176,7 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection<ICat>(
           COL_NAME,
           {
-            name: {
+            string: {
               validations: {
                 IS_NOT_NULL: async (value: any, doc: ICat) => value !== null && value !== undefined,
               },
@@ -185,11 +184,11 @@ describe('SuGo MongoDb - Collection', () => {
           },
           { client },
         );
-        const cat = await SpecifiedCol.create({ name: 'fluffy' });
+        const cat = await SpecifiedCol.create({ string: 'fluffy' });
         if (!cat) {
           chai.expect.fail();
         } else {
-          cat.name.should.be.eql('fluffy');
+          cat.string.should.be.eql('fluffy');
         }
       });
 
@@ -197,7 +196,7 @@ describe('SuGo MongoDb - Collection', () => {
         const SpecifiedCol = new Collection(
           COL_NAME,
           {
-            name: {
+            string: {
               validations: {
                 IS_NOT_NULL: async (value, doc) => value !== null && value !== undefined,
               },
@@ -244,12 +243,12 @@ describe('SuGo MongoDb - Collection', () => {
         docs.length.should.be.eql(2);
       });
 
-      it('should return only name attribute', async () => {
-        const docs = await CatCol.list({}, { name: 1 });
+      it('should return only string attribute', async () => {
+        const docs = await CatCol.list({}, { string: 1 });
         docs.length.should.be.eql(5);
         const [first] = docs;
         const containsPure = Object.keys(first).includes('pure').should.be.false;
-        const containsName = Object.keys(first).includes('name').should.be.true;
+        const containsName = Object.keys(first).includes('string').should.be.true;
       });
 
       it('should return only one', async () => {
@@ -261,14 +260,14 @@ describe('SuGo MongoDb - Collection', () => {
         const docs: ICat[] = await CatCol.list({}, {}, 1, 1);
         docs.length.should.be.eql(1);
         const [second] = docs;
-        second.name.should.be.eql('Two');
+        second.string.should.be.eql('Two');
       });
 
-      it('should sort the name ', async () => {
-        const docs: ICat[] = await CatCol.list({}, {}, 99999, 0, { name: 1 });
+      it('should sort the string ', async () => {
+        const docs: ICat[] = await CatCol.list({}, {}, 99999, 0, { string: 1 });
         docs.length.should.be.eql(5);
         const [first] = docs;
-        first.name.should.be.eql('Five');
+        first.string.should.be.eql('Five');
       });
     });
 
@@ -302,16 +301,16 @@ describe('SuGo MongoDb - Collection', () => {
       });
 
       it('should one cat', async () => {
-        const doc = await CatCol.get({ name: 'One' });
+        const doc = await CatCol.get({ string: 'One' });
       });
 
-      it('should one cat with only name', async () => {
-        const doc = await CatCol.get({ name: 'One' }, { name: 1 });
+      it('should one cat with only string', async () => {
+        const doc = await CatCol.get({ string: 'One' }, { string: 1 });
         if (!doc) {
           chai.expect.fail();
         } else {
           const containsPure = Object.keys(doc).includes('pure').should.be.false;
-          const containsName = Object.keys(doc).includes('name').should.be.true;
+          const containsName = Object.keys(doc).includes('string').should.be.true;
         }
       });
     });
@@ -329,13 +328,13 @@ describe('SuGo MongoDb - Collection', () => {
         const doc = await CatCol.getById(cats[0]._id);
       });
 
-      it('should one cat with only name', async () => {
-        const doc = await CatCol.getById(cats[0]._id, { name: 1 });
+      it('should one cat with only string', async () => {
+        const doc = await CatCol.getById(cats[0]._id, { string: 1 });
         if (!doc) {
           chai.expect.fail();
         } else {
           const containsPure = Object.keys(doc).includes('pure').should.be.false;
-          const containsName = Object.keys(doc).includes('name').should.be.true;
+          const containsName = Object.keys(doc).includes('string').should.be.true;
         }
       });
     });
@@ -361,11 +360,11 @@ describe('SuGo MongoDb - Collection', () => {
       });
 
       it('should patch one cat', async () => {
-        const doc = await CatCol.patchById(cats[0]._id, { name: 'Hello' });
+        const doc = await CatCol.patchById(cats[0]._id, { string: 'Hello' });
         if (!doc) {
           chai.expect.fail();
         } else {
-          doc.name.should.be.eq('Hello');
+          doc.string.should.be.eq('Hello');
         }
       });
     });
@@ -383,7 +382,7 @@ describe('SuGo MongoDb - Collection', () => {
         if (!doc) {
           chai.expect.fail();
         } else {
-          doc.name.should.be.eq('One');
+          doc.string.should.be.eq('One');
         }
       });
     });

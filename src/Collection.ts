@@ -1,18 +1,10 @@
-import * as dotObject from 'dot-object';
 import * as moment from 'moment';
-import {
-  Collection as MongoCollection,
-  Db,
-  FindAndModifyWriteOpResultObject,
-  MongoClient,
-  ObjectId,
-  WriteOpResult,
-} from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { client } from './Client';
 import { Document } from './Document';
 import {
+  FieldType,
   ICollectionOptions,
-  IDocument,
   IDynamicObject,
   IFieldSpecification,
   IIndexSpecification,
@@ -28,7 +20,7 @@ export const DEFAULT_DATE_FORMAT = [
 ];
 export const FALSE_VALUES = ['false', 0, false];
 export const TRUE_VALUES = ['true', 1, true];
-export const FIELD_TYPES = {
+export const FIELD_TYPES: { [key: string]: FieldType } = {
   BOOLEAN: 'boolean',
   DATE: 'date',
   FLOAT: 'float',
@@ -39,7 +31,7 @@ export const FIELD_TYPES = {
 export const CREATED_AT_KEY = 'createdAt';
 export const UPDATED_AT_KEY = 'updatedAtKey';
 
-export class Collection<T extends IDocument> {
+export class Collection<T extends Document> {
   public name: string;
   public fields: IFieldSpecification<T>;
   public indexes: IIndexSpecification[] = [];

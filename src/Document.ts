@@ -1,6 +1,6 @@
 import * as dotObject from 'dot-object';
 import moment = require('moment');
-import { Collection as MongoCollection, Db, MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import { Collection, DEFAULT_DATE_FORMAT, FALSE_VALUES, FIELD_TYPES, TRUE_VALUES } from './Collection';
 import { ParsingError, ValidationError } from './exceptions';
 import DocumentNotPersistedError from './exceptions/DocumentNotPersistedError';
@@ -77,6 +77,9 @@ export class Document implements IDynamicObject {
     for (const fieldKey in fieldSpecs) {
       if (fieldSpecs.hasOwnProperty(fieldKey)) {
         const currentValue = dotObject.pick(fieldKey, this, false);
+        if (currentValue === undefined) {
+          continue;
+        }
         const valueType = fieldSpecs[fieldKey].type;
         const dateFormats = fieldSpecs[fieldKey].formats;
         let parsedValue;
