@@ -2,7 +2,26 @@
   "name": "@sugo/mongodb",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "author": {
+    "name": "Francisco Javier Sucre Gonzalez",
+    "email": "franciscojsucreg@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https@git@github.com:sugojs/sugo-mongodb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sugojs/sugo-mongodb"
+  },
+  "homepage": "https://github.com/sugojs/sugo-mongodb#readme",
+  "directories": {
+    "test": "test"
+  },
   "dependencies": {
     "dot-object": "^1.7.1",
     "moment": "^2.24.0",
@@ -36,6 +55,5 @@
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags"
   },
-  "author": "",
   "license": "ISC"
 }
