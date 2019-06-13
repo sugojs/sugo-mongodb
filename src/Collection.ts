@@ -38,13 +38,13 @@ export class Collection<T extends Document> {
   public createdAtKey = CREATED_AT_KEY;
   public updatedAtKey = UPDATED_AT_KEY;
   public options: ICollectionOptions;
-  public client: MongoClient;
+  private _client?: MongoClient;
 
   constructor(name: string, fields: IFieldSpecification<T> = {}, options: ICollectionOptions = {}) {
     this.name = name;
     this.fields = fields;
     this.options = options;
-    this.client = options.client ? options.client : client;
+    this._client = options.client;
   }
 
   public new(data: Partial<T>): T {
@@ -53,6 +53,13 @@ export class Collection<T extends Document> {
     instance.parse();
     instance.addCreatedAt();
     return instance as T;
+  }
+
+  public get client() {
+    if (this._client) {
+      return this._client;
+    }
+    return client;
   }
 
   public async list(
