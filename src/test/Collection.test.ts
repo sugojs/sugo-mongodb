@@ -1,10 +1,9 @@
 import * as chai from 'chai';
 import { Collection as MongoCollection, Db as MongoDb, MongoClient, ObjectId } from 'mongodb';
-import { connect, disconnect } from '../Client';
 import { Collection, FIELD_TYPES } from '../Collection';
 import { Document } from '../Document';
 import { IDynamicObject } from '../Interfaces';
-import { getDb } from '../Mongodb';
+import { connect, disconnect, getDb } from '../Mongodb';
 
 const COL_NAME = 'cats';
 const URI = 'mongodb://localhost:27017/sugo-mongodb-test';

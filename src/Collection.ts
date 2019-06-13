@@ -1,6 +1,5 @@
 import * as moment from 'moment';
 import { MongoClient, ObjectId } from 'mongodb';
-import { client } from './Client';
 import { Document } from './Document';
 import {
   FieldType,
@@ -11,7 +10,7 @@ import {
   IProjection,
   ISort,
 } from './Interfaces';
-import { getMongoCollection, processFindOneAndWriteResult } from './Mongodb';
+import { getClient, getMongoCollection, processFindOneAndWriteResult } from './Mongodb';
 export const DEFAULT_DATE_FORMAT = [
   moment.HTML5_FMT.DATETIME_LOCAL,
   moment.HTML5_FMT.DATETIME_LOCAL_SECONDS,
@@ -59,7 +58,7 @@ export class Collection<T extends Document> {
     if (this._client) {
       return this._client;
     }
-    return client;
+    return getClient();
   }
 
   public async list(
