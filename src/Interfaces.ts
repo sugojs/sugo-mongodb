@@ -33,7 +33,7 @@ export interface IIndexSpecification {
 }
 
 export interface ISort {
-  [key: string]: 0 | 1;
+  [key: string]: -1 | 1;
 }
 
 export interface IProjection {
